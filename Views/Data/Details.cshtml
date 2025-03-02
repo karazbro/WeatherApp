@@ -1,0 +1,62 @@
+﻿@model List<WeatherApp.Models.WeatherData>
+@{
+    ViewData["Title"] = "Детали погоды";
+}
+
+<h2>Погода за @ViewBag.Month @ViewBag.Year</h2>
+
+<form method="get" class="mb-3">
+    <div class="row">
+        <div class="col-md-3">
+            <label>Месяц:</label>
+            <select name="month" class="form-select" onchange="this.form.submit()">
+                @for (int i = 1; i <= 12; i++)
+                {
+                    <option value="@i" selected="@(i == ViewBag.SelectedMonth ? "selected" : null)">@(new DateTime(2000, i, 1).ToString("MMMM", new System.Globalization.CultureInfo("ru-RU")))</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label>Год:</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                @foreach (var y in ViewBag.AvailableYears)
+                {
+                    <option value="@y" selected="@(y == ViewBag.SelectedYear ? "selected" : null)">@y</option>
+                }
+            </select>
+        </div>
+    </div>
+</form>
+
+@if (Model.Any())
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Температура (°C)</th>
+                <th>Влажность (%)</th>
+                <th>Давление (мм рт. ст.)</th>
+                <th>Ветер</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Date.ToString("dd.MM.yyyy")</td>
+                    <td>@item.Time.ToString(@"hh\:mm")</td>
+                    <td>@(item.Temperature?.ToString("F1") ?? "-")</td>
+                    <td>@(item.Humidity?.ToString() ?? "-")</td>
+                    <td>@(item.Pressure?.ToString() ?? "-")</td>
+                    <td>@(item.WindDirection ?? "-") @(item.WindSpeed.HasValue ? $"{item.WindSpeed} м/с" : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>Нет данных за этот период.</p>
+}

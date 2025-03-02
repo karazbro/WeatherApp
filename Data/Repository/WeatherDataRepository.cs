@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using WeatherApp.Data;
 using WeatherApp.Models;
+using WeatherApp.Utilities;
 
 namespace WeatherApp.Repositories
 {
@@ -15,21 +16,35 @@ namespace WeatherApp.Repositories
         public WeatherDataRepository(ApplicationDbContext context)
         {
             _context = context;
+            Console.WriteLine("WeatherDataRepository создан успешно.");
         }
 
         public async Task<bool> SaveWeatherDataAsync(List<WeatherData> weatherData)
         {
             try
             {
-                // Добавляем данные в БД
-                await _context.WeatherData.AddRangeAsync(weatherData);
-                await _context.SaveChangesAsync();
+                Console.WriteLine($"Попытка сохранить {weatherData.Count} записей.");
+                var existingDates = await _context.WeatherData
+                    .Select(w => new { w.Date, w.Time })
+                    .ToListAsync();
+
+                var newData = weatherData
+                    .Where(w => !existingDates.Any(e => e.Date == w.Date && e.Time == w.Time))
+                    .ToList();
+
+                Console.WriteLine($"Новых записей для сохранения: {newData.Count}");
+                if (newData.Any())
+                {
+                    await _context.WeatherData.AddRangeAsync(newData);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("Данные успешно сохранены.");
+                }
                 return true;
             }
             catch (Exception ex)
             {
-                // В реальном приложении здесь должно быть логирование
                 Console.WriteLine($"Ошибка при сохранении данных: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -72,7 +87,6 @@ namespace WeatherApp.Repositories
         {
             try
             {
-                // Удаляем все записи из таблицы
                 _context.WeatherData.RemoveRange(_context.WeatherData);
                 await _context.SaveChangesAsync();
                 return true;
@@ -92,12 +106,11 @@ namespace WeatherApp.Repositories
                 .Select(g => new
                 {
                     Month = g.Key,
-                    AverageTemperature = g.Average(w => w.Temperature.Value)
+                    AverageTemperature = g.Average(w => w.Temperature!.Value) 
                 })
                 .OrderBy(x => x.Month)
                 .ToListAsync();
 
-            // Преобразуем числовые месяцы в названия на русском языке
             var culture = new System.Globalization.CultureInfo("ru-RU");
             return result.ToDictionary(
                 r => new DateTime(year, r.Month, 1).ToString("MMMM", culture),
@@ -127,7 +140,7 @@ namespace WeatherApp.Repositories
 
                 if (data.Any())
                 {
-                    var temps = data.Where(d => d.Temperature.HasValue).Select(d => d.Temperature.Value).ToList();
+                    var temps = data.Select(d => d.Temperature!.Value).ToList(); 
                     var monthName = new DateTime(year, month, 1).ToString("MMMM", culture);
 
                     statistics[monthName] = new Dictionary<string, double>

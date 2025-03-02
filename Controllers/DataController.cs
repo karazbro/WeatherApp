@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WeatherApp.Data;
 using WeatherApp.Models;
 using WeatherApp.Repositories;
 using WeatherApp.Services;
+using WeatherApp.Utilities;
 
 namespace WeatherApp.Controllers
 {
@@ -13,11 +15,14 @@ namespace WeatherApp.Controllers
     {
         private readonly ExcelParserService _excelParserService;
         private readonly WeatherDataRepository _repository;
+        private readonly ApplicationDbContext _context;
 
-        public DataController(ExcelParserService excelParserService, WeatherDataRepository repository)
+        public DataController(ExcelParserService excelParserService, WeatherDataRepository repository, ApplicationDbContext context)
         {
             _excelParserService = excelParserService;
             _repository = repository;
+            _context = context;
+            Console.WriteLine("DataController создан успешно.");
         }
 
         // GET: Data/Import
@@ -28,107 +33,85 @@ namespace WeatherApp.Controllers
 
         // POST: Data/Import
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Import(List<IFormFile> excelFiles)
         {
+            Console.WriteLine("Начало импорта данных.");
             if (excelFiles == null || excelFiles.Count == 0)
             {
-                ModelState.AddModelError("", "Пожалуйста, выберите хотя бы один Excel-файл для загрузки.");
+                TempData["Error"] = "Пожалуйста, выберите хотя бы один Excel-файл.";
                 return View();
             }
 
-            try
+            int totalImported = 0;
+            List<string> processedFiles = new List<string>();
+            List<string> failedFiles = new List<string>();
+
+            foreach (var file in excelFiles)
             {
-                // Track total imported records
-                int totalImportedRecords = 0;
-                List<string> processedFiles = new List<string>();
-                List<string> failedFiles = new List<string>();
-
-                foreach (var excelFile in excelFiles)
+                Console.WriteLine($"Обработка файла: {file.FileName}");
+                if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!excelFile.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ModelState.AddModelError("", $"Файл {excelFile.FileName} имеет неподдерживаемый формат. Пожалуйста, загрузите файлы в формате .xlsx");
-                        continue;
-                    }
+                    failedFiles.Add(file.FileName + " (неверный формат)");
+                    continue;
+                }
 
-                    try
+                try
+                {
+                    using (var stream = file.OpenReadStream())
                     {
-                        // Открываем поток файла
-                        using (var stream = excelFile.OpenReadStream())
+                        Console.WriteLine($"Чтение файла {file.FileName}");
+                        var weatherData = _excelParserService.ParseExcelFile(stream);
+                        if (weatherData == null || weatherData.Count == 0)
                         {
-                            // Парсим данные из файла
-                            var weatherData = _excelParserService.ParseExcelFile(stream);
+                            failedFiles.Add(file.FileName + " (нет данных)");
+                            continue;
+                        }
 
-                            if (weatherData.Count > 0)
-                            {
-                                // Добавляем данные в БД (без очистки для пакетной загрузки)
-                                var success = await _repository.SaveWeatherDataAsync(weatherData);
-
-                                if (success)
-                                {
-                                    totalImportedRecords += weatherData.Count;
-                                    processedFiles.Add(excelFile.FileName);
-                                }
-                                else
-                                {
-                                    failedFiles.Add(excelFile.FileName);
-                                }
-                            }
-                            else
-                            {
-                                // Файл был обработан, но данных нет
-                                ModelState.AddModelError("", $"Файл {excelFile.FileName} не содержит данных в ожидаемом формате.");
-                                failedFiles.Add(excelFile.FileName);
-                            }
+                        Console.WriteLine($"Сохранение {weatherData.Count} записей из файла {file.FileName}");
+                        bool success = await _repository.SaveWeatherDataAsync(weatherData);
+                        if (success)
+                        {
+                            totalImported += weatherData.Count;
+                            processedFiles.Add(file.FileName);
+                        }
+                        else
+                        {
+                            failedFiles.Add(file.FileName + " (ошибка сохранения)");
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        // Ошибка при обработке конкретного файла
-                        ModelState.AddModelError("", $"Ошибка при обработке файла {excelFile.FileName}: {ex.Message}");
-                        failedFiles.Add(excelFile.FileName);
-                    }
                 }
-
-                // Итоговое сообщение
-                if (totalImportedRecords > 0)
+                catch (Exception ex)
                 {
-                    TempData["Success"] = $"Успешно импортировано {totalImportedRecords} записей о погоде из {processedFiles.Count} файлов.";
-
-                    if (failedFiles.Count > 0)
-                    {
-                        TempData["Warning"] = $"Не удалось обработать следующие файлы: {string.Join(", ", failedFiles)}";
-                    }
-
-                    return RedirectToAction("Index", "Home");
-                }
-                else
-                {
-                    TempData["Error"] = "Не удалось импортировать данные. Проверьте формат файлов.";
-                    return View();
+                    Console.WriteLine($"Ошибка при обработке файла {file.FileName}: {ex.Message}");
+                    failedFiles.Add(file.FileName + " (" + ex.Message + ")");
                 }
             }
-            catch (Exception ex)
+
+            if (totalImported > 0)
             {
-                ModelState.AddModelError("", $"Общая ошибка при импорте данных: {ex.Message}");
-                return View();
+                TempData["Success"] = $"Успешно импортировано {totalImported} записей из {processedFiles.Count} файлов.";
+                if (failedFiles.Count > 0)
+                {
+                    TempData["Error"] = $"Не удалось обработать: {string.Join(", ", failedFiles)}";
+                }
             }
+            else
+            {
+                TempData["Error"] = "Не удалось импортировать данные. Проверьте файлы и попробуйте снова.";
+            }
+
+            Console.WriteLine("Импорт завершён.");
+            return RedirectToAction("Index", "Home");
         }
 
         // GET: Data/List
         public async Task<IActionResult> List(DateTime? startDate, DateTime? endDate, int page = 1)
         {
-            if (!startDate.HasValue)
-                startDate = DateTime.Today.AddMonths(-1);
+            startDate ??= DateTime.Today.AddMonths(-1);
+            endDate ??= DateTime.Today;
 
-            if (!endDate.HasValue)
-                endDate = DateTime.Today;
-
-            // Добавляем пагинацию
-            int pageSize = 50; // количество записей на странице
-            var paginatedData = await _repository.GetWeatherDataByDateRangePaginatedAsync(
-                startDate.Value, endDate.Value, page, pageSize);
+            int pageSize = 50;
+            var paginatedData = await _repository.GetWeatherDataByDateRangePaginatedAsync(startDate.Value, endDate.Value, page, pageSize);
 
             ViewBag.StartDate = startDate.Value.ToString("yyyy-MM-dd");
             ViewBag.EndDate = endDate.Value.ToString("yyyy-MM-dd");
@@ -137,25 +120,21 @@ namespace WeatherApp.Controllers
             ViewBag.HasPreviousPage = page > 1;
             ViewBag.HasNextPage = page < paginatedData.TotalPages;
 
-            return View(paginatedData.Items);
+            return View(paginatedData);
         }
 
-        // GET: Data/Details/5
-        public async Task<IActionResult> Details(int month, int year)
+        // GET: Data/Details?month=5&year=2023
+        public async Task<IActionResult> Details(int? month = null, int? year = null)
         {
-            if (month < 1 || month > 12)
-            {
-                month = DateTime.Now.Month;
-            }
+            month ??= DateTime.Now.Month;
+            year ??= DateTime.Now.Year;
 
-            if (year < 1900 || year > DateTime.Now.Year)
-            {
-                year = DateTime.Now.Year;
-            }
+            if (month < 1 || month > 12) month = DateTime.Now.Month;
+            if (year < 1900 || year > DateTime.Now.Year) year = DateTime.Now.Year;
 
-            var data = await _repository.GetWeatherDataByMonthAndYearAsync(month, year);
+            var data = await _repository.GetWeatherDataByMonthAndYearAsync(month.Value, year.Value);
 
-            ViewBag.Month = new DateTime(year, month, 1).ToString("MMMM", new System.Globalization.CultureInfo("ru-RU"));
+            ViewBag.Month = new DateTime(year.Value, month.Value, 1).ToString("MMMM", new System.Globalization.CultureInfo("ru-RU"));
             ViewBag.Year = year;
             ViewBag.AvailableYears = await _repository.GetAvailableYearsAsync();
             ViewBag.SelectedMonth = month;
@@ -164,7 +143,7 @@ namespace WeatherApp.Controllers
             return View(data);
         }
 
-        // GET: Data/DeleteAll 
+        // GET: Data/DeleteAll
         public IActionResult DeleteAll()
         {
             return View();
@@ -176,16 +155,14 @@ namespace WeatherApp.Controllers
         public async Task<IActionResult> DeleteAllConfirmed()
         {
             var result = await _repository.DeleteAllWeatherDataAsync();
-
             if (result)
             {
-                TempData["Success"] = "Все данные о погоде были успешно удалены.";
+                TempData["Success"] = "Все данные успешно удалены.";
             }
             else
             {
-                TempData["Error"] = "Произошла ошибка при удалении данных.";
+                TempData["Error"] = "Ошибка при удалении данных.";
             }
-
             return RedirectToAction("Index", "Home");
         }
     }

@@ -10,44 +10,47 @@ namespace WeatherApp.Models
         public int Id { get; set; }
 
         [Required]
-        [Column(TypeName = "timestamp without time zone")]
+        [Column(TypeName = "date")]
         public DateTime Date { get; set; }
 
         [Required]
+        [Column(TypeName = "time without time zone")]
         public TimeSpan Time { get; set; }
 
-        // Температура воздуха в градусах Цельсия
+        // Температура
         public double? Temperature { get; set; }
 
-        // Относительная влажность воздуха в процентах
+        // влажность
         public int? Humidity { get; set; }
 
-        // Точка росы в градусах Цельсия
+        // Точка росы
         public double? DewPoint { get; set; }
 
-        // Атмосферное давление в мм рт.ст.
+        //давление
         public int? Pressure { get; set; }
 
         // Направление ветра
-        public string WindDirection { get; set; }
+        public string? WindDirection { get; set; }
 
-        // Скорость ветра в м/с
+        // Скорость ветра
         public int? WindSpeed { get; set; }
 
-        // Облачность в процентах
+        // Облачность
         public int? Cloudiness { get; set; }
 
-        // Нижняя граница облачности в метрах
+        // Нижняя граница облачности
         public int? CloudBase { get; set; }
 
-        // Горизонтальная видимость в км
+        // Горизонтальная видимость
         public string? Visibility { get; set; }
 
         // Погодные явления
         public string? WeatherPhenomena { get; set; }
 
-        // Для группировки по месяцам и годам
+        [NotMapped]
         public int Month => Date.Month;
+
+        [NotMapped]
         public int Year => Date.Year;
     }
 }

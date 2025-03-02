@@ -17,11 +17,11 @@ namespace WeatherApp.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Настраиваем индексы для ускорения запросов по дате, месяцу и году
+            // индекс для быстрого поиска по дате
             modelBuilder.Entity<WeatherData>()
                 .HasIndex(w => w.Date);
 
-            // Можно добавить дополнительные настройки модели здесь
+
         }
     }
 }

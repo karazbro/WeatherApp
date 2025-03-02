@@ -27,21 +27,21 @@ else
                     <div class="col-md-4">
                         <label for="year" class="form-label">Выберите год:</label>
                         <select name="year" id="year" class="form-select" onchange="this.form.submit()">
-                            @foreach(var year in Model.Years)
+                            @foreach (var year in Model.Years)
                             {
-                                <option value="@year" @(year == Model.SelectedYear ? "selected" : "")>@year</option>
+                                <option value="@year" selected="@(year == Model.SelectedYear ? "selected" : null)">@year</option>
                             }
                         </select>
                     </div>
                 </div>
             </form>
-            
+
             <div class="chart-container" style="position: relative; height:60vh;">
                 <canvas id="temperatureChart"></canvas>
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <div class="col-md-6">
             <div class="card">
@@ -58,4 +58,45 @@ else
                         </li>
                     </ul>
                 </div>
-            </div
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        var ctx = document.getElementById('temperatureChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [@Html.Raw(string.Join(",", Model.AverageTemperatures.Keys.Select(k => $"'{k}'")))],
+                datasets: [{
+                    label: 'Средняя температура (°C)',
+                    data: [@Html.Raw(string.Join(",", Model.AverageTemperatures.Values))],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Температура (°C)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Месяц'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
