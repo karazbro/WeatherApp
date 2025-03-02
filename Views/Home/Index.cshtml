@@ -1,0 +1,144 @@
+﻿@model WeatherDashboardViewModel
+@{
+    ViewData["Title"] = "Главная";
+}
+
+<div class="text-center mb-4">
+    <h1 class="display-4">Анализ погоды</h1>
+    <p>Добро пожаловать в приложение для анализа метеорологических данных</p>
+</div>
+
+@if (Model.Years.Count == 0)
+{
+    <div class="alert alert-info">
+        <h4>Нет данных для отображения</h4>
+        <p>Пожалуйста, импортируйте данные о погоде через <a asp-controller="Data" asp-action="Import">страницу импорта</a>.</p>
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Средняя температура по месяцам</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="Index" method="post" class="mb-4">
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">Выберите год:</label>
+                        <select name="year" id="year" class="form-select" onchange="this.form.submit()">
+                            @foreach(var year in Model.Years)
+                            {
+                                @* <option value="@year" @(year == Model.SelectedYear ? "selected" : "")>@year</option> *@
+                                <a asp-action="Index" asp-controller="Home" asp-route-id="@year">@year</a>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="chart-container" style="position: relative; height:60vh;">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Быстрые ссылки</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <a asp-controller="Data" asp-action="List">Просмотр всех данных</a>
+                        </li>
+                        <li class="list-group-item">
+                            <a asp-controller="Data" asp-action="Import">Импорт новых данных</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Статистика</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Месяц</th>
+                                <th>Средняя температура (°C)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.MonthlyTemperatures)
+                            {
+                                <tr>
+                                    <td>@item.Key</td>
+                                    <td>@item.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Years.Count > 0)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var ctx = document.getElementById('temperatureChart').getContext('2d');
+                
+                var months = @Html.Raw(Json.Serialize(Model.MonthlyTemperatures.Keys));
+                var temperatures = @Html.Raw(Json.Serialize(Model.MonthlyTemperatures.Values));
+                
+                var chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: 'Средняя температура (°C)',
+                            data: temperatures,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Температура (°C)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Средняя температура по месяцам за @Model.SelectedYear год',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    }
+}

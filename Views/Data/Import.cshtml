@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "Импорт данных";
+}
+
+<div class="container">
+    <h2>Импорт данных о погоде из Excel-файла</h2>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Загрузка Excel-файла</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Import" method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Внимание! Импорт новых данных приведет к удалению всех существующих данных.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="excelFile" class="form-label">Выберите Excel-файл (.xlsx):</label>
+                            @* <input type="file" name="excelFile" id="excelFile" class="form-control" accept=".xlsx" required /> *@
+                            <div class="form-text">Пожалуйста, убедитесь, что данные соответствуют ожидаемому формату.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Импортировать
+                            </button>
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Вернуться
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Инструкции</h5>
+                </div>
+                <div class="card-body">
+                    <p>Для успешного импорта данных, пожалуйста, убедитесь, что ваш Excel-файл содержит следующие столбцы:</p>
+                    <ol>
+                        <li>Дата</li>
+                        <li>Время</li>
+                        <li>Температура (°C)</li>
+                        <li>Влажность (%)</li>
+                        <li>Точка росы (°C)</li>
+                        <li>Давление (мм рт.ст.)</li>
+                        <li>Направление ветра</li>
+                        <li>Скорость ветра (м/с)</li>
+                        <li>Облачность (%)</li>
+                        <li>Нижняя граница облачности (м)</li>
+                        <li>Видимость (км)</li>
+                        <li>Погодные явления</li>
+                    </ol>
+                    <p>Первые 4 строки файла считаются заголовками и будут пропущены при импорте.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

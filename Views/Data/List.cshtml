@@ -1,0 +1,44 @@
+﻿@model IEnumerable<WeatherData>
+@{
+    ViewData["Title"] = "Список данных";
+}
+
+<div class="container">
+    <h2>Список данных о погоде</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Фильтр по датам</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="List" method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="startDate" class="form-label">Начальная дата:</label>
+                    <input type="date" id="startDate" name="startDate" class="form-control" value="@ViewBag.StartDate" />
+                </div>
+                <div class="col-md-4">
+                    <label for="endDate" class="form-label">Конечная дата:</label>
+                    <input type="date" id="endDate" name="endDate" class="form-control" value="@ViewBag.EndDate" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Применить фильтр
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <h4>Нет данных для отображения</h4>
+            <p>Попробуйте изменить параметры фильтра или <a asp-controller="Data" asp-action="Import">импортировать данные</a>.</p>
+        </div>
+    }
+ @*    else
+    {
+        <div class="table *@
