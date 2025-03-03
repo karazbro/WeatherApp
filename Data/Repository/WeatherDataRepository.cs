@@ -87,13 +87,65 @@ namespace WeatherApp.Repositories
         {
             try
             {
-                _context.WeatherData.RemoveRange(_context.WeatherData);
-                await _context.SaveChangesAsync();
-                return true;
+                Console.WriteLine("Попытка удалить все данные из таблицы WeatherData.");
+                var weatherData = await _context.WeatherData.ToListAsync();
+                if (weatherData.Any())
+                {
+                    Console.WriteLine($"Найдено {weatherData.Count} записей для удаления.");
+                    _context.WeatherData.RemoveRange(weatherData);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine("Все данные успешно удалены.");
+                    return true;
+                }
+                Console.WriteLine("Нет данных для удаления в таблице WeatherData.");
+                return false;
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                Console.WriteLine($"Ошибка базы данных при удалении всех данных: {ex.Message}");
+                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при удалении данных: {ex.Message}");
+                Console.WriteLine($"Неизвестная ошибка при удалении всех данных: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteWeatherDataByYearAsync(int year)
+        {
+            try
+            {
+                Console.WriteLine($"Попытка удалить данные за год {year} из таблицы WeatherData.");
+                var dataToDelete = await _context.WeatherData
+                    .Where(w => w.Date.Year == year)
+                    .ToListAsync();
+
+                if (dataToDelete.Any())
+                {
+                    Console.WriteLine($"Найдено {dataToDelete.Count} записей для удаления за год {year}.");
+                    _context.WeatherData.RemoveRange(dataToDelete);
+                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"Данные за год {year} успешно удалены.");
+                    return true;
+                }
+                Console.WriteLine($"Нет данных для удаления за год {year} в таблице WeatherData.");
+                return false;
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                Console.WriteLine($"Ошибка базы данных при удалении данных за год {year}: {ex.Message}");
+                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Неизвестная ошибка при удалении данных за год {year}: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -106,12 +158,18 @@ namespace WeatherApp.Repositories
                 .Select(g => new
                 {
                     Month = g.Key,
-                    AverageTemperature = g.Average(w => w.Temperature!.Value) 
+                    AverageTemperature = g.Average(w => w.Temperature!.Value)
                 })
                 .OrderBy(x => x.Month)
                 .ToListAsync();
 
             var culture = new System.Globalization.CultureInfo("ru-RU");
+            if (!result.Any())
+            {
+                Console.WriteLine($"Нет данных о температуре для года {year}. Возвращаем пустой словарь.");
+                return new Dictionary<string, double>();
+            }
+
             return result.ToDictionary(
                 r => new DateTime(year, r.Month, 1).ToString("MMMM", culture),
                 r => Math.Round(r.AverageTemperature, 1)
@@ -140,7 +198,7 @@ namespace WeatherApp.Repositories
 
                 if (data.Any())
                 {
-                    var temps = data.Select(d => d.Temperature!.Value).ToList(); 
+                    var temps = data.Select(d => d.Temperature!.Value).ToList();
                     var monthName = new DateTime(year, month, 1).ToString("MMMM", culture);
 
                     statistics[monthName] = new Dictionary<string, double>

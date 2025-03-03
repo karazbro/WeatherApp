@@ -1,0 +1,27 @@
+﻿@model WeatherDashboardViewModel
+@{
+    ViewData["Title"] = "Удаление всех данных";
+}
+
+<div class="container">
+    <h2>Удаление всех данных о погоде</h2>
+    <hr />
+
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> Внимание! Это действие приведет к удалению всех данных о погоде из базы данных. Это действие нельзя отменить.
+    </div>
+
+    <form asp-action="DeleteAllConfirmed" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Удалить все данные
+            </button>
+            <a asp-action="Index" asp-controller="Home" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Отмена
+            </a>
+        </div>
+        @Html.AntiForgeryToken()
+    </form>
+</div>

@@ -29,16 +29,26 @@ else
                         <select name="year" id="year" class="form-select" onchange="this.form.submit()">
                             @foreach (var year in Model.Years)
                             {
-                                <option value="@year" selected="@(year == Model.SelectedYear ? "selected" : null)">@year</option>
+                                @if (year == Model.SelectedYear)
+                                {
+                                    <option value="@year" selected>@year</option>
+                                }
+                                else
+                                {
+                                    <option value="@year">@year</option>
+                                }
                             }
                         </select>
                     </div>
                 </div>
             </form>
 
-            <div class="chart-container" style="position: relative; height:60vh;">
+            <div class="chart-container" style="position: relative; height: 400px; width: 100%;">
                 <canvas id="temperatureChart"></canvas>
             </div>
+
+            <!-- Добавим сообщение, если график не отображается -->
+            <div id="chartMessage" class="mt-3"></div>
         </div>
     </div>
 
@@ -56,6 +66,12 @@ else
                         <li class="list-group-item">
                             <a asp-controller="Data" asp-action="Import">Импорт новых данных</a>
                         </li>
+                        <li class="list-group-item">
+                            <a asp-controller="Data" asp-action="DeleteAll">Удалить все данные</a>
+                        </li>
+                        <li class="list-group-item">
+                            <a asp-controller="Data" asp-action="DeleteYear">Удалить данные за год</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -65,38 +81,88 @@ else
 
 @section Scripts {
     <script>
-        var ctx = document.getElementById('temperatureChart').getContext('2d');
-        var chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [@Html.Raw(string.Join(",", Model.AverageTemperatures.Keys.Select(k => $"'{k}'")))],
-                datasets: [{
-                    label: 'Средняя температура (°C)',
-                    data: [@Html.Raw(string.Join(",", Model.AverageTemperatures.Values))],
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Температура (°C)'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Месяц'
-                        }
-                    }
+        // Проверяем, загружен ли Chart.js
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js не загружен. Проверь путь к библиотеке.');
+            document.getElementById('chartMessage').innerHTML = '<div class="alert alert-danger">Chart.js не загружен. Проверь подключение через CDN или локальный файл.</div>';
+        } else {
+            console.log('Chart.js успешно загружен.');
+            // Убеждаемся, что DOM полностью загружен
+            document.addEventListener('DOMContentLoaded', function () {
+                // Получаем контекст канваса
+                var ctx = document.getElementById('temperatureChart');
+                if (!ctx) {
+                    console.error('Элемент canvas с id="temperatureChart" не найден.');
+                    document.getElementById('chartMessage').innerHTML = '<div class="alert alert-danger">Элемент графика не найден. Проверь HTML.</div>';
+                    return;
                 }
-            }
-        });
+
+                var context = ctx.getContext('2d');
+
+                // Проверяем, есть ли данные для графика
+                var labels = @Html.Raw(Json.Serialize(Model.AverageTemperatures?.Keys != null
+        ? Model.AverageTemperatures.Keys.ToList()
+        : new List<string> { "Нет данных" }));
+                var data = @Html.Raw(Json.Serialize(Model.AverageTemperatures?.Values != null
+          ? Model.AverageTemperatures.Values.ToList()
+          : new List<double> { 0 }));
+
+                console.log('Labels:', labels);
+                console.log('Data:', data);
+
+                if (!labels || !data || labels.length === 0 || data.length === 0) {
+                    console.warn('Нет данных для построения графика. Показываем пустой график.');
+                    document.getElementById('chartMessage').innerHTML = '<div class="alert alert-warning">Нет данных для построения графика. Импортируйте данные или выберите другой год.</div>';
+                    labels = ['Нет данных'];
+                    data = [0];
+                }
+
+                // Создаём график
+                try {
+                    var chart = new Chart(context, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Средняя температура (°C)',
+                                data: data,
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Температура (°C)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Месяц'
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    });
+                    console.log('График успешно создан.');
+                } catch (error) {
+                    console.error('Ошибка при создании графика:', error);
+                    document.getElementById('chartMessage').innerHTML = '<div class="alert alert-danger">Ошибка при создании графика. Проверь консоль для деталей.</div>';
+                }
+            });
+        }
     </script>
 }

@@ -17,17 +17,12 @@ namespace WeatherApp.Controllers
 
         public async Task<IActionResult> Index(int? year)
         {
-            var model = new WeatherDashboardViewModel();
-            model.Years = await _repository.GetAvailableYearsAsync();
-
-            if (model.Years.Count == 0)
+            var model = new WeatherDashboardViewModel
             {
-                return View(model);
-            }
-
-            model.SelectedYear = year ?? model.Years.Last();
-            model.AverageTemperatures = await _repository.GetAverageTemperatureByMonthAsync(model.SelectedYear);
-
+                Years = await _repository.GetAvailableYearsAsync(),
+                SelectedYear = year ?? DateTime.Now.Year,
+                AverageTemperatures = await _repository.GetAverageTemperatureByMonthAsync(year ?? DateTime.Now.Year) ?? new Dictionary<string, double>()
+            };
             return View(model);
         }
 

@@ -154,16 +154,95 @@ namespace WeatherApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAllConfirmed()
         {
-            var result = await _repository.DeleteAllWeatherDataAsync();
-            if (result)
+            try
             {
-                TempData["Success"] = "Все данные успешно удалены.";
+                Console.WriteLine("Попытка удалить все данные из таблицы WeatherData.");
+                var result = await _repository.DeleteAllWeatherDataAsync();
+                if (result)
+                {
+                    TempData["Success"] = "Все данные успешно удалены.";
+                    Console.WriteLine("Все данные успешно удалены.");
+                }
+                else
+                {
+                    TempData["Error"] = "Не удалось удалить данные. Нет данных для удаления или произошла ошибка.";
+                    Console.WriteLine("Не удалось удалить данные.");
+                }
+                return RedirectToAction("Index", "Home");
             }
-            else
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
             {
-                TempData["Error"] = "Ошибка при удалении данных.";
+                Console.WriteLine($"Ошибка базы данных при удалении всех данных: {ex.Message}");
+                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                TempData["Error"] = $"Ошибка при удалении данных: {ex.Message}";
+                return RedirectToAction("Index", "Home");
             }
-            return RedirectToAction("Index", "Home");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Неизвестная ошибка при удалении всех данных: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                TempData["Error"] = $"Неизвестная ошибка при удалении данных: {ex.Message}";
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
+        // GET: Data/DeleteYear
+        public async Task<IActionResult> DeleteYear(int? year)
+        {
+            if (!year.HasValue)
+            {
+                TempData["Error"] = "Укажите год для удаления.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var availableYears = await _repository.GetAvailableYearsAsync();
+            if (!availableYears.Contains(year.Value))
+            {
+                TempData["Error"] = $"Нет данных для года {year.Value}.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            ViewBag.Year = year.Value;
+            return View();
+        }
+
+        // POST: Data/DeleteYear
+        [HttpPost, ActionName("DeleteYear")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteYearConfirmed(int year)
+        {
+            try
+            {
+                Console.WriteLine($"Попытка удалить данные за год {year} из таблицы WeatherData.");
+                var result = await _repository.DeleteWeatherDataByYearAsync(year);
+                if (result)
+                {
+                    TempData["Success"] = $"Данные за год {year} успешно удалены.";
+                    Console.WriteLine($"Данные за год {year} успешно удалены.");
+                }
+                else
+                {
+                    TempData["Error"] = $"Не удалось удалить данные за год {year}. Нет данных или произошла ошибка.";
+                    Console.WriteLine($"Не удалось удалить данные за год {year}.");
+                }
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                Console.WriteLine($"Ошибка базы данных при удалении данных за год {year}: {ex.Message}");
+                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                TempData["Error"] = $"Ошибка при удалении данных за год {year}: {ex.Message}";
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Неизвестная ошибка при удалении данных за год {year}: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                TempData["Error"] = $"Неизвестная ошибка при удалении данных за год {year}: {ex.Message}";
+                return RedirectToAction("Index", "Home");
+            }
         }
     }
 }
