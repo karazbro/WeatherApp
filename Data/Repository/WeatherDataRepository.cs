@@ -88,17 +88,9 @@ namespace WeatherApp.Repositories
             try
             {
                 Console.WriteLine("Попытка удалить все данные из таблицы WeatherData.");
-                var weatherData = await _context.WeatherData.ToListAsync();
-                if (weatherData.Any())
-                {
-                    Console.WriteLine($"Найдено {weatherData.Count} записей для удаления.");
-                    _context.WeatherData.RemoveRange(weatherData);
-                    await _context.SaveChangesAsync();
-                    Console.WriteLine("Все данные успешно удалены.");
-                    return true;
-                }
-                Console.WriteLine("Нет данных для удаления в таблице WeatherData.");
-                return false;
+                await _context.WeatherData.ExecuteDeleteAsync();
+                Console.WriteLine("Все данные успешно удалены.");
+                return true;
             }
             catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
             {
@@ -120,20 +112,11 @@ namespace WeatherApp.Repositories
             try
             {
                 Console.WriteLine($"Попытка удалить данные за год {year} из таблицы WeatherData.");
-                var dataToDelete = await _context.WeatherData
+                await _context.WeatherData
                     .Where(w => w.Date.Year == year)
-                    .ToListAsync();
-
-                if (dataToDelete.Any())
-                {
-                    Console.WriteLine($"Найдено {dataToDelete.Count} записей для удаления за год {year}.");
-                    _context.WeatherData.RemoveRange(dataToDelete);
-                    await _context.SaveChangesAsync();
-                    Console.WriteLine($"Данные за год {year} успешно удалены.");
-                    return true;
-                }
-                Console.WriteLine($"Нет данных для удаления за год {year} в таблице WeatherData.");
-                return false;
+                    .ExecuteDeleteAsync();
+                Console.WriteLine($"Данные за год {year} успешно удалены.");
+                return true;
             }
             catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
             {

@@ -1,0 +1,33 @@
+﻿@{
+    ViewData["Title"] = "Удаление данных за год";
+}
+
+<div class="container">
+    <h2>Удаление данных за год</h2>
+    <hr />
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="alert alert-warning">
+        <strong>Внимание!</strong> Это действие удалит все данные за выбранный год. Отменить невозможно.
+    </div>
+
+    <form asp-controller="Data" asp-action="DeleteYearConfirmed" method="post">
+        <div class="form-group">
+            <label for="year">Выберите год:</label>
+            <select name="year" id="year" class="form-control" required>
+                <option value="">-- Выберите год --</option>
+                @foreach (var y in ViewBag.AvailableYears)
+                {
+                    <option value="@y">@y</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-danger">Удалить данные за выбранный год</button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Отмена</a>
+        @Html.AntiForgeryToken()
+    </form>
+</div>

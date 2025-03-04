@@ -143,20 +143,21 @@ namespace WeatherApp.Controllers
             return View(data);
         }
 
-        // GET: Data/DeleteAll
+        // GET: /Data/DeleteAll
         public IActionResult DeleteAll()
         {
+            Console.WriteLine("GET-запрос на /Data/DeleteAll выполнен.");
             return View();
         }
 
-        // POST: Data/DeleteAll
-        [HttpPost, ActionName("DeleteAll")]
+        // POST: /Data/DeleteAllConfirmed
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAllConfirmed()
         {
+            Console.WriteLine("POST-запрос на /Data/DeleteAllConfirmed получен.");
             try
             {
-                Console.WriteLine("Попытка удалить все данные из таблицы WeatherData.");
                 var result = await _repository.DeleteAllWeatherDataAsync();
                 if (result)
                 {
@@ -165,56 +166,47 @@ namespace WeatherApp.Controllers
                 }
                 else
                 {
-                    TempData["Error"] = "Не удалось удалить данные. Нет данных для удаления или произошла ошибка.";
+                    TempData["Error"] = "Не удалось удалить данные. Возможно, данные отсутствуют.";
                     Console.WriteLine("Не удалось удалить данные.");
                 }
                 return RedirectToAction("Index", "Home");
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
-            {
-                Console.WriteLine($"Ошибка базы данных при удалении всех данных: {ex.Message}");
-                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                TempData["Error"] = $"Ошибка при удалении данных: {ex.Message}";
-                return RedirectToAction("Index", "Home");
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Неизвестная ошибка при удалении всех данных: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                TempData["Error"] = $"Неизвестная ошибка при удалении данных: {ex.Message}";
+                TempData["Error"] = $"Ошибка при удалении данных: {ex.Message}";
+                Console.WriteLine($"Ошибка: {ex.Message}");
                 return RedirectToAction("Index", "Home");
             }
         }
 
-        // GET: Data/DeleteYear
-        public async Task<IActionResult> DeleteYear(int? year)
+        // GET: /Data/DeleteYear
+        public async Task<IActionResult> DeleteYear()
         {
-            if (!year.HasValue)
-            {
-                TempData["Error"] = "Укажите год для удаления.";
-                return RedirectToAction("Index", "Home");
-            }
-
+            Console.WriteLine("GET-запрос на /Data/DeleteYear выполнен.");
             var availableYears = await _repository.GetAvailableYearsAsync();
-            if (!availableYears.Contains(year.Value))
+            if (availableYears.Count == 0)
             {
-                TempData["Error"] = $"Нет данных для года {year.Value}.";
+                TempData["Error"] = "Нет данных для удаления.";
                 return RedirectToAction("Index", "Home");
             }
-
-            ViewBag.Year = year.Value;
+            ViewBag.AvailableYears = availableYears; 
             return View();
         }
 
-        // POST: Data/DeleteYear
-        [HttpPost, ActionName("DeleteYear")]
+        // POST: /Data/DeleteYearConfirmed
+        [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteYearConfirmed(int year)
         {
+            Console.WriteLine($"POST-запрос на /Data/DeleteYearConfirmed для года {year} получен.");
+            if (year == 0) 
+            {
+                TempData["Error"] = "Укажите год для удаления.";
+                return RedirectToAction("DeleteYear");
+            }
+
             try
             {
-                Console.WriteLine($"Попытка удалить данные за год {year} из таблицы WeatherData.");
                 var result = await _repository.DeleteWeatherDataByYearAsync(year);
                 if (result)
                 {
@@ -223,24 +215,15 @@ namespace WeatherApp.Controllers
                 }
                 else
                 {
-                    TempData["Error"] = $"Не удалось удалить данные за год {year}. Нет данных или произошла ошибка.";
+                    TempData["Error"] = $"Не удалось удалить данные за год {year}. Возможно, данных нет.";
                     Console.WriteLine($"Не удалось удалить данные за год {year}.");
                 }
                 return RedirectToAction("Index", "Home");
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
-            {
-                Console.WriteLine($"Ошибка базы данных при удалении данных за год {year}: {ex.Message}");
-                Console.WriteLine($"Внутреннее исключение: {ex.InnerException?.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                TempData["Error"] = $"Ошибка при удалении данных за год {year}: {ex.Message}";
-                return RedirectToAction("Index", "Home");
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Неизвестная ошибка при удалении данных за год {year}: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                TempData["Error"] = $"Неизвестная ошибка при удалении данных за год {year}: {ex.Message}";
+                TempData["Error"] = $"Ошибка при удалении данных за год {year}: {ex.Message}";
+                Console.WriteLine($"Ошибка: {ex.Message}");
                 return RedirectToAction("Index", "Home");
             }
         }
